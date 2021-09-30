@@ -22,7 +22,7 @@ camera.rotation.y = -0.0012420117680866415
 camera.rotation.z = -3.1216026905486522
 
 const panorPos = new THREE.Vector3(-0.003792507533639839, 2.945836908993275, -0.8037527760299142);
-// const panorRot = new THREE.Euler(-1.837156655683214, -0.0012420117680866415, -3.1216026905486522);
+const panorRot = new THREE.Euler(-1.837156655683214, -0.0012420117680866415, -3.1216026905486522);
 
 // Wide pearl shot
 
@@ -70,6 +70,27 @@ const renderer = new THREE.WebGLRenderer({
   canvas: document.querySelector('#bg'),
 });
 
+// const imgcanvas = document.getElementById('imgcanvas');
+// imgcanvas.width = 8192; 
+// imgcanvas.height = 4096;
+// const imgctx = imgcanvas.getContext('2d');
+// performance.mark('begin create image');
+// const imageData = imgctx.createImageData(8192, 4096);
+// performance.mark('begin iterate through pixels');
+// for (let i = 0; i < imageData.data.length; i += 4) {
+//   // Modify pixel data
+//   imageData.data[i + 0] = Math.random()*255;  // R value
+//   imageData.data[i + 1] = Math.random()*255;    // G value
+//   imageData.data[i + 2] = Math.random()*255;  // B value
+//   imageData.data[i + 3] = Math.random()*255;  // A value
+// }
+// performance.mark('begin put image data');
+// imgctx.putImageData(imageData, 0, 0);
+// performance.mark('begin generate data url');
+// const jpgimg = imgcanvas.toDataURL('image/jpeg', 1);
+// performance.mark('done');
+// console.log(performance.measure('total time ', 'begin create image', 'done'))
+
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -87,7 +108,7 @@ renderer.render(scene, camera);
 
 // const pointLight = new THREE.PointLight(0xffffff);
 // pointLight.position.set(-50, -50, 50);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+const directionalLight = new THREE.DirectionalLight(0xfdfbd3, 1);
 directionalLight.position.set(-50, 50, 50);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.001);
@@ -115,7 +136,7 @@ function addStar() {
   return star;
 }
 
-// spaceship
+// spaceship //
 const geometry = new THREE.TetrahedronGeometry(0.01);
 const material = new THREE.MeshStandardMaterial({ color: 0x8f564f });
 material.roughness = 0;
@@ -132,19 +153,36 @@ scene.add(spaceship);
 const spaceTexture = new THREE.TextureLoader().load('black-space.jpg');
 scene.background = spaceTexture;
 
-// Moon
+// Moon // 
 
-const moonTexture = new THREE.TextureLoader().load('8k_moon.jpeg');
-const normalTexture = new THREE.TextureLoader().load('moon_normal.jpg');
+const moonHiResTexture = new THREE.TextureLoader().load('8k_moon.jpeg', function() {
+  console.log('loaded!');
+  globe.clearGroups();
+  globe.addGroup(0, globe.index.count, 1);
+});
+const normalHiResTexture = new THREE.TextureLoader().load('moon_normal.jpg');
+const hiResMesh = new THREE.MeshStandardMaterial({
+  map: moonHiResTexture,
+  normalMap: normalHiResTexture,
+  roughness: 1,
+});
 
+const moonLowResTexture = new THREE.TextureLoader().load('moon.jpg');
+// const moonTexture =  new THREE.TextureLoader().load(jpgimg);
+const normalLowResTexture = new THREE.TextureLoader().load('normal.jpg');
+// const normalTexture = new THREE.TextureLoader().load(jpgimg);
+const lowResMesh = new THREE.MeshStandardMaterial({
+  map: moonLowResTexture,
+  normalMap: normalLowResTexture,
+  roughness: 1,
+});
+
+const globe = new THREE.SphereGeometry(3, 64, 64);
 const moon = new THREE.Mesh(
-  new THREE.SphereGeometry(3, 64, 64),
-  new THREE.MeshStandardMaterial({
-    map: moonTexture,
-    normalMap: normalTexture,
-    roughness: 1,
-  })
+  globe,
+  [lowResMesh, hiResMesh],
 );
+globe.addGroup(0, globe.index.count, 0);
 
 scene.add(moon);
 
@@ -152,61 +190,59 @@ moon.position.z = -2;
 moon.position.setX(0);
 moon.rotation.z = 1.80;
 
-// Scroll Animation
+// Scroll Animation //
 
-function moveCamera() {
-  const t = document.body.getBoundingClientRect().top;
-  moon.rotation.x += 0.0002;
-  // moon.rotation.y += 0.00075;
-  // moon.rotation.z += 0.0005;
+// function moveCamera() {
+//   const t = document.body.getBoundingClientRect().top;
+//   moon.rotation.x += 0.0002;
+// }
 
-  // camera.position.z = t * -0.01;
-  // camera.position.x = t * -0.0002;
-  // camera.rotation.y = t * -0.0005;
+// document.body.onscroll = moveCamera;
+// moveCamera();
 
-  // const v = Math.cos(0.9+0.003*t);
-
-  // directionalLight.position.set(-50*v, 50*v, 50);
-}
-
-document.body.onscroll = moveCamera;
-document.body.onclick = function printcameraloc() {
-  console.log(camera.position);
-  console.log(camera.rotation);
-  console.log(directionalLight.position);
-}
-moveCamera();
+// document.body.onclick = function printcameraloc() {
+//   console.log(camera.position);
+//   console.log(camera.rotation);
+//   console.log(directionalLight.position);
+// }
 
 // Animation Loop
 // const controls = new OrbitControls(camera, renderer.domElement);
 let t = 0.0;
 let lerpPhase = 0.0;
 const lerpDelta = 0.00002;
+let dest = new THREE.Vector3(camera.position.x,camera.position.y,camera.position.z);
 
 function animate() {
   requestAnimationFrame(animate);
 
-  // torus.rotation.x += 0.01;
-  // torus.rotation.y += 0.005;
-  // torus.rotation.z += 0.01;
   t += 0.3;
   const v = Math.cos(0.9+0.003*t);
+  const w = Math.sin(0.9+0.003*t);
 
-  directionalLight.position.set(-50*v, 50*v, 50);
+  directionalLight.position.set(-50*v, 50*w, 50);
 
   // stars.forEach(s => { s.position.x += 0.01; })
-  // const _camStep = camera.position.add(cameraPath);
-  // camera.position.set(_camStep.x,_camStep.y,_camStep.z);
-  lerpPhase += lerpDelta;
-  if (lerpPhase < 0.89) { camera.position.lerp(panorPos, lerpDelta); }
-  // camera.rotation.
-  // console.log(cameraPath)
+  // lerpPhase += lerpDelta;
+  // if (lerpPhase < 0.89) { camera.position.lerp(panorPos, lerpDelta); }
+
   moon.rotation.x += 0.0001;
+
+	camera.position.x += (dest.x - camera.position.x) * 0.05;
+  camera.position.z += (dest.z - camera.position.z) * 0.05;
+  camera.lookAt( spaceship.position );
+  camera.rotation.set(pearlRot.x, camera.rotation.y, pearlRot.z);
 
   // controls.update();
 
   renderer.render(scene, camera);
 }
-// console.log(camera.position.add(cameraPath.multiplyScalar(0*0.01)))
-
 animate();
+
+document.addEventListener('mousemove', function(event) {
+  const mouseX	= (event.clientX / window.innerWidth ) - 0.5;
+  const mouseY	= (event.clientY / window.innerHeight) - 0.5;
+  dest.x = pearlPos.x + (mouseX*3 - camera.position.x) * 0.3;
+  dest.z = pearlPos.z + (mouseY*9 - camera.position.z) * 0.02;
+  
+}, false);
